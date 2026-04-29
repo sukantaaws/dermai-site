@@ -1,0 +1,1519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0e2070">
+<title>DermaScan</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --blue:#1d4ed8;
+  --sky:#93c5fd;
+  --white:#fff;
+  --dim:rgba(255,255,255,0.68);
+  --faint:rgba(255,255,255,0.28);
+  --ghost:rgba(255,255,255,0.09);
+  --border:rgba(255,255,255,0.16);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bot: env(safe-area-inset-bottom, 0px);
+}
+
+html{height:100%;overflow:hidden}
+body{
+  height:100%;
+  font-family:'DM Sans',sans-serif;
+  background:#0e2070;
+  color:#fff;
+  overflow:hidden;
+  position:fixed;
+  width:100%;
+  /* Blue radial splash */
+  background-image:
+    radial-gradient(ellipse 130% 70% at 50% -5%, #3b82f6 0%, transparent 55%),
+    radial-gradient(ellipse 80% 50% at 5% 35%,  rgba(59,130,246,0.25) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 45% at 95% 75%, rgba(14,36,130,0.5)  0%, transparent 55%);
+}
+
+/* ── SCREEN STACK ── */
+#app{
+  position:absolute;inset:0;
+  overflow:hidden;
+}
+
+.screen{
+  position:absolute;inset:0;
+  overflow-y:auto;
+  overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+  display:none;
+  flex-direction:column;
+  opacity:0;pointer-events:none;
+  transition:opacity .28s ease, transform .28s ease;
+  transform:translateX(30px);
+  z-index:1;
+}
+.screen.active{
+  display:flex;
+  opacity:1;pointer-events:all;
+  transform:translateX(0);
+  z-index:2;
+}
+.screen.exit{
+  display:flex;
+  opacity:0;transform:translateX(-30px);
+  z-index:1;
+}
+
+/* ── SPLASH LAYOUT ── */
+#s-splash{
+  justify-content:flex-start;align-items:stretch;
+}
+
+.splash-bg-top{
+  position:relative;
+  flex-shrink:0;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding-top:calc(var(--safe-top) + 16px);
+  gap:16px;
+  text-align:center;
+  padding-inline:28px;
+}
+
+.sp-logo-ring{
+  position:relative;
+  width:56px;height:56px;
+  display:flex;align-items:center;justify-content:center;
+}
+.sp-logo-ring::before{
+  content:'';position:absolute;inset:-9px;
+  border-radius:50%;border:1px solid rgba(255,255,255,0.14);
+  animation:rpulse 3s ease-in-out infinite;
+}
+.sp-logo-ring::after{
+  content:'';position:absolute;inset:-20px;
+  border-radius:50%;border:1px solid rgba(255,255,255,0.06);
+  animation:rpulse 3s ease-in-out infinite .5s;
+}
+@keyframes rpulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.04);opacity:.4}}
+.sp-logo{
+  width:56px;height:56px;border-radius:50%;
+  background:linear-gradient(145deg,rgba(255,255,255,0.18),rgba(255,255,255,0.06));
+  border:1px solid rgba(255,255,255,0.26);
+  display:flex;align-items:center;justify-content:center;
+  font-size:32px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.22),inset 0 1px 0 rgba(255,255,255,0.28);
+}
+
+.sp-headline{
+  font-family:'Cormorant Garamond',serif;
+  font-size:32px;font-weight:500;line-height:1.1;
+  letter-spacing:-.02em;
+}
+.sp-headline em{font-style:italic;color:var(--sky)}
+
+.sp-time{
+  display:inline-flex;align-items:center;gap:7px;
+  background:rgba(255,255,255,0.1);
+  border:1px solid rgba(255,255,255,0.18);
+  border-radius:20px;padding:6px 14px;
+  font-size:12px;font-weight:600;color:var(--sky);
+  letter-spacing:.04em;
+}
+.sp-time-dot{
+  width:6px;height:6px;border-radius:50%;
+  background:#4ade80;box-shadow:0 0 6px #4ade80;
+  animation:blink 2s ease-in-out infinite;
+}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+
+/* White formal card at bottom */
+.splash-card{
+  position:relative;z-index:2;
+  background:#fff;
+  border-radius:18px;
+  color:#111827;
+  box-shadow:0 8px 40px rgba(0,0,0,0.3);
+  max-width:480px;
+  margin:16px auto 0;
+  align-self:center;
+  padding:20px 24px 16px;max-height:none;
+}
+
+.sc-kicker{
+  font-size:10px;font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;color:#2563eb;
+  display:flex;align-items:center;gap:6px;
+  margin-bottom:6px;
+}
+.sc-kicker::before{content:'';width:10px;height:2px;background:#2563eb;border-radius:1px}
+
+.sc-title{
+  font-family:'Cormorant Garamond',serif;
+  font-size:24px;font-weight:600;color:#0f172a;
+  margin-bottom:4px;line-height:1.25;
+}
+.sc-sub{font-size:13px;color:#6b7280;margin-bottom:20px;line-height:1.5}
+
+.sc-steps{
+  display:flex;flex-direction:column;gap:0;
+  border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;
+  margin-bottom:12px;
+}
+.sc-step{
+  display:flex;align-items:center;gap:12px;
+  padding:10px 14px;border-bottom:1px solid #f1f5f9;
+  background:#fff;
+}
+.sc-step:last-child{border-bottom:none}
+.sc-step-n{
+  width:26px;height:26px;border-radius:50%;
+  background:#eff6ff;border:1.5px solid #bfdbfe;
+  color:#1d4ed8;font-size:12px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;font-family:'Cormorant Garamond',serif;font-size:13px;
+}
+.sc-step-label{font-size:13px;font-weight:600;color:#111827;flex:1}
+.sc-step-time{font-size:10px;color:#9ca3af;font-weight:500}
+
+.btn-splash{
+  width:100%;padding:12px;
+  background:linear-gradient(135deg,#1d4ed8,#2563eb);
+  color:#fff;border:none;border-radius:14px;
+  font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;
+  cursor:pointer;letter-spacing:.01em;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  box-shadow:0 6px 18px rgba(29,78,216,0.38);
+  transition:all .15s;-webkit-tap-highlight-color:transparent;
+}
+.btn-splash:active{transform:scale(0.98);box-shadow:0 2px 8px rgba(29,78,216,0.3)}
+.btn-splash svg{width:16px;height:16px}
+
+.sc-footer{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-top:12px;
+}
+.sc-disclaimer{font-size:11px;color:#9ca3af;line-height:1.4;flex:1;padding-right:10px}
+.sc-api{font-size:11px;color:#6b7280;background:none;border:none;font-family:inherit;cursor:pointer;text-decoration:underline;text-underline-offset:2px;white-space:nowrap;padding:0}
+.sc-api:active{color:#1d4ed8}
+
+/* ── SURVEY SCREENS ── */
+.survey-screen{
+  padding-top:calc(var(--safe-top) + 60px);
+  padding-bottom:60px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  flex:1;
+  min-height:0;
+}
+
+/* sticky top bar */
+.sbar{
+  position:absolute;top:0;left:0;right:0;z-index:10;width:100%;
+  background:rgba(14,32,112,0.85);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  padding:calc(var(--safe-top) + 12px) 20px 12px;
+  display:flex;align-items:center;gap:12px;
+  border-bottom:1px solid rgba(255,255,255,0.08);
+}
+.sbar-back{
+  width:36px;height:36px;border-radius:50%;
+  background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.16);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;flex-shrink:0;color:#fff;
+  -webkit-tap-highlight-color:transparent;
+  transition:background .15s;
+}
+.sbar-back:active{background:rgba(255,255,255,0.2)}
+.sbar-back svg{width:16px;height:16px}
+.sbar-progress-wrap{flex:1;display:flex;flex-direction:column;gap:4px}
+.sbar-label{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--sky)}
+.progress-track{display:flex;gap:4px}
+.pd{flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,0.18);transition:background .3s}
+.pd.done{background:rgba(255,255,255,0.85)}
+.pd.cur{background:var(--sky)}
+
+/* question body */
+.qbody{padding:20px 24px 8px;max-width:480px;width:100%;margin:0 auto;background:#fff;color:#111827;border-radius:24px;box-shadow:0 0 48px rgba(0,0,0,0.22);overflow-y:auto;min-height:520px;display:flex;flex-direction:column}
+.q-eyebrow{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#2563eb;margin-bottom:4px}
+.q-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:500;line-height:1.2;margin-bottom:4px;color:#0f172a}
+.q-sub{font-size:13px;color:#6b7280;line-height:1.45;margin-bottom:10px}
+
+/* options */
+.opts{display:flex;flex-direction:column;gap:6px}
+.opts.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.opts.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+
+.opt{
+  background:#f1f5f9;border:1.5px solid #e2e8f0;
+  border-radius:12px;padding:8px 12px;
+  cursor:pointer;transition:all .15s;
+  text-align:left;font-family:'DM Sans',sans-serif;color:#1e293b;
+  -webkit-tap-highlight-color:transparent;
+  display:flex;align-items:center;gap:10px;
+}
+.opt:active{background:#e2e8f0}
+.opt.sel{background:#dbeafe;border-color:#93c5fd}
+.opt-icon{font-size:18px;flex-shrink:0;width:24px;text-align:center}
+.opt-body{flex:1}
+.opt-main{font-size:13px;font-weight:600;display:block}
+.opt-sub{font-size:11px;color:#6b7280;margin-top:2px;display:block}
+
+/* slider */
+.slider-wrap{margin-bottom:2px}
+.slider-display{text-align:center;margin-bottom:14px;padding-top:4px}
+.slider-num{font-family:'Cormorant Garamond',serif;font-size:56px;font-weight:500;color:#1e3a8a;line-height:1}
+.slider-unit{font-size:17px;color:#6b7280;margin-left:3px}
+input[type=range]{
+  width:100%;height:5px;appearance:none;-webkit-appearance:none;
+  border-radius:3px;background:#dbeafe;outline:none;cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:26px;height:26px;
+  border-radius:50%;background:#fff;cursor:pointer;
+  box-shadow:0 2px 10px rgba(0,0,0,0.28);
+  border:2px solid #93c5fd;
+}
+.slider-limits{display:flex;justify-content:space-between;font-size:10px;color:#9ca3af;margin-top:7px}
+
+/* section label inside question */
+.q-section{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#2563eb;margin:12px 0 6px}
+
+/* bottom action bar */
+.qfoot{
+  position:relative;bottom:0;z-index:10;
+  background:#fff;
+  padding:14px 24px 20px;
+  border-top:1px solid #e5e7eb;
+  border-radius:0 0 24px 24px;
+  box-shadow:0 12px 48px rgba(0,0,0,0.22);
+  max-width:480px;
+  width:100%;
+  margin:-8px auto 20px;
+  flex-shrink:0;
+}
+.btn-next{
+  width:100%;padding:15px;
+  background:linear-gradient(135deg,#1d4ed8,#2563eb);color:#fff;
+  border:none;border-radius:13px;
+  font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;
+  position:relative;overflow:hidden;
+  box-shadow:0 4px 16px rgba(29,78,216,0.38);
+  -webkit-tap-highlight-color:transparent;transition:all .15s;
+}
+.btn-next:active{transform:scale(0.98)}
+.btn-next:disabled{opacity:.38;cursor:not-allowed}
+.shimmer{position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);transform:translateX(-100%)}
+.btn-next.loading .shimmer{animation:shim 1.2s infinite}
+@keyframes shim{to{transform:translateX(100%)}}
+.btn-next svg{width:15px;height:15px}
+
+/* ── PHOTO SCREEN ── */
+.photo-body{background:#fff;color:#111827;border-radius:24px;box-shadow:0 0 48px rgba(0,0,0,0.22);max-width:480px;width:100%;margin:0 auto;padding:20px 20px 8px;display:flex;flex-direction:column;gap:12px;min-height:520px}
+
+.upload-zone{
+  border:2px dashed #cbd5e1;
+  border-radius:16px;padding:36px 20px;text-align:center;
+  cursor:pointer;transition:all .2s;
+  position:relative;overflow:hidden;
+  background:#f1f5f9;
+  -webkit-tap-highlight-color:transparent;
+}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
+.upload-zone:active{background:rgba(255,255,255,0.15)}
+.upload-zone.has-img{padding:0;border-style:solid;border-color:rgba(255,255,255,0.4)}
+.up-icon{font-size:28px;display:block;margin-bottom:8px}
+.upload-zone h3{font-size:15px;font-weight:600;margin-bottom:4px}
+.upload-zone p{font-size:12px;color:var(--dim)}
+#preview-img{width:100%;border-radius:14px;display:none;max-height:300px;object-fit:cover}
+
+.cam-wrap{
+  display:none;border-radius:16px;overflow:hidden;
+  position:relative;aspect-ratio:3/4;background:#000;
+  max-height:55vh;
+}
+#cam-video{width:100%;height:100%;object-fit:cover}
+.cam-overlay{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;padding:16px}
+.cam-frame-abs{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.cf{width:130px;height:130px;position:relative}
+.cc{position:absolute;width:15px;height:15px;border-color:rgba(255,255,255,.8);border-style:solid}
+.cc-tl{top:0;left:0;border-width:2px 0 0 2px}.cc-tr{top:0;right:0;border-width:2px 2px 0 0}
+.cc-bl{bottom:0;left:0;border-width:0 0 2px 2px}.cc-br{bottom:0;right:0;border-width:0 2px 2px 0}
+.cam-scanline{position:absolute;left:0;right:0;height:1.5px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.7),transparent);animation:cscan 2s ease-in-out infinite}
+@keyframes cscan{0%{top:0;opacity:0}15%{opacity:1}85%{opacity:1}100%{top:100%;opacity:0}}
+.cam-controls{display:flex;align-items:center;justify-content:space-between}
+.cam-capture{
+  width:60px;height:60px;border-radius:50%;
+  background:#fff;border:3px solid rgba(255,255,255,0.4);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.3);
+  -webkit-tap-highlight-color:transparent;transition:transform .15s;
+}
+.cam-capture:active{transform:scale(0.92)}
+.cam-capture svg{width:22px;height:22px}
+.cam-sm{
+  background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.2);
+  color:#fff;border-radius:9px;padding:8px 14px;
+  font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;
+  -webkit-tap-highlight-color:transparent;
+}
+.cam-sm:active{background:rgba(0,0,0,0.6)}
+
+.btn-cam{
+  width:100%;padding:14px;
+  background:#f1f5f9;
+  border:1.5px solid #e2e8f0;border-radius:13px;
+  color:#374151;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;
+  -webkit-tap-highlight-color:transparent;transition:all .15s;
+}
+.btn-cam:active{background:rgba(255,255,255,0.18);color:#fff}
+
+/* ── ANALYZING ── */
+.ao-wrap{
+  flex:1;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:40px 24px;text-align:center;gap:16px;
+;max-width:480px;margin-left:auto;margin-right:auto}
+.ao-spin{
+  width:52px;height:52px;
+  border:3px solid rgba(255,255,255,0.18);border-top-color:#fff;
+  border-radius:50%;animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ao-title{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:500}
+.ao-sub{font-size:13px;color:var(--dim)}
+.ao-steps{list-style:none;text-align:left;margin-top:8px;display:flex;flex-direction:column;gap:8px}
+.ao-steps li{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--faint);transition:color .3s}
+.ao-steps li.act{color:#fff;font-weight:500}
+.ao-steps li.done{color:#86efac}
+.ao-ico{font-family:monospace;width:14px;font-size:11px;flex-shrink:0}
+
+/* ── RESULTS ── */
+.results-body{padding:20px 20px calc(var(--safe-bot)+80px)}
+.risk-pill{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 14px;border-radius:20px;
+  font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;
+}
+.risk-pill.high{background:rgba(254,202,202,.18);color:#fca5a5;border:1px solid rgba(254,202,202,.28)}
+.risk-pill.medium{background:rgba(254,215,170,.18);color:#fcd34d;border:1px solid rgba(254,215,170,.28)}
+.risk-pill.low{background:rgba(167,243,208,.18);color:#6ee7b7;border:1px solid rgba(167,243,208,.25)}
+.res-title{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:500;margin-bottom:6px}
+.res-desc{font-size:13px;color:var(--dim);line-height:1.6;margin-bottom:16px}
+#res-thumb{width:100%;border-radius:14px;max-height:200px;object-fit:cover;display:none;margin-bottom:14px}
+.abcde-row{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:14px}
+.abc-cell{border-radius:10px;padding:10px 4px;text-align:center;border:1px solid rgba(255,255,255,0.14);background:#f1f5f9}
+.abc-cell.concern{background:rgba(254,202,202,.15);border-color:rgba(254,202,202,.3)}
+.abc-cell.caution{background:rgba(254,215,170,.15);border-color:rgba(254,215,170,.3)}
+.abc-cell.normal{background:rgba(167,243,208,.1);border-color:rgba(167,243,208,.22)}
+.abc-letter{font-family:'DM Mono',monospace;font-size:15px;font-weight:700;display:block;margin-bottom:3px}
+.abc-cell.concern .abc-letter{color:#fca5a5}
+.abc-cell.caution .abc-letter{color:#fcd34d}
+.abc-cell.normal  .abc-letter{color:#6ee7b7}
+.abc-note{font-size:9px;color:var(--dim);line-height:1.3}
+.conf-row{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.conf-label{font-size:11px;color:var(--faint);min-width:80px}
+.conf-track{flex:1;height:5px;background:rgba(255,255,255,0.14);border-radius:3px;overflow:hidden}
+.conf-fill{height:100%;border-radius:3px;background:#fff;transition:width 1.2s ease}
+.conf-val{font-family:'DM Mono',monospace;font-size:12px;font-weight:500;min-width:34px;text-align:right}
+.findings{display:flex;flex-direction:column;gap:0;margin-bottom:14px}
+.fi{display:flex;align-items:flex-start;gap:9px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.07)}
+.fi:last-child{border-bottom:none}
+.fi-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.fi-dot.concern{background:#fca5a5}.fi-dot.caution{background:#fcd34d}.fi-dot.normal{background:#6ee7b7}
+.fi-text{font-size:12px;color:var(--dim);line-height:1.5}
+.disclaimer-box{background:rgba(0,0,0,0.2);border-radius:10px;padding:12px 14px;font-size:11px;color:var(--faint);line-height:1.6;margin-bottom:14px}
+
+/* results sticky btn */
+.res-foot{
+  position:fixed;bottom:36px;left:0;right:0;z-index:10;
+  background:#fff;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  padding:12px 20px calc(var(--safe-bot)+12px);
+  border-top:1px solid rgba(255,255,255,0.08);
+;max-width:480px;margin:0 auto;border-radius:0 0 18px 18px;}
+
+/* ── SETTINGS ── */
+.settings-body{padding:24px 20px;display:flex;flex-direction:column;gap:16px}
+.input-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);display:block;margin-bottom:6px}
+.input-field{
+  width:100%;padding:13px 14px;
+  background:rgba(255,255,255,0.09);border:1.5px solid rgba(255,255,255,0.2);
+  border-radius:12px;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;
+  outline:none;transition:border-color .15s;-webkit-appearance:none;
+}
+.input-field::placeholder{color:var(--faint)}
+.input-field:focus{border-color:rgba(255,255,255,0.48)}
+.help-text{font-size:11px;color:var(--faint);line-height:1.6;margin-top:6px}
+.help-text a{color:var(--sky);text-decoration:none}
+
+.qbody .slider-num,.qbody .slider-unit{color:#0f172a}
+.qbody .slider-wrap{color:#374151}
+.qbody input[type="range"]{accent-color:#2563eb}
+.qbody .opt{background:#f1f5f9;border:1px solid #e2e8f0;color:#111827}
+.qbody .opt.sel{background:#dbeafe;border-color:#3b82f6;color:#1d4ed8}
+.qbody .help-text,.qbody .input-label{color:#6b7280}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
+</head>
+<body>
+<div id="app">
+
+<!-- ══════════════════════════
+  SPLASH
+══════════════════════════ -->
+<div class="screen active" id="s-splash">
+  <div class="splash-bg-top">
+    <div class="sp-logo-ring">
+      <div class="sp-logo">🩺</div>
+    </div>
+    <h1 class="sp-headline">Scan Your Skin <em>in Seconds</em></h1>
+    <p style="font-size:15px;color:rgba(255,255,255,0.68);margin-top:4px">AI-powered screening from a single photo</p>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:14px;padding-inline:12px">
+      <span style="padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(255,107,107,0.18);border:1px solid rgba(255,107,107,0.35);color:#fca5a5">Melanoma</span>
+      <span style="padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(255,217,61,0.15);border:1px solid rgba(255,217,61,0.3);color:#fde68a">Carcinoma</span>
+      <span style="padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(255,217,61,0.12);border:1px solid rgba(255,217,61,0.25);color:#fde68a">Keratosis</span>
+      <span style="padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.25);color:#86efac">Moles</span>
+      <span style="padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(147,197,253,0.12);border:1px solid rgba(147,197,253,0.25);color:#93c5fd">Fibroma</span>
+      <span style="padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(196,181,253,0.12);border:1px solid rgba(196,181,253,0.25);color:#c4b5fd">Vascular</span>
+      <span style="padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(147,197,253,0.12);border:1px solid rgba(147,197,253,0.25);color:#93c5fd">Lesions</span>
+    </div>
+    <div id="model-status" style="font-size:11px;padding:4px 12px;border-radius:12px;background:rgba(255,165,0,0.2);border:1px solid rgba(255,165,0,0.4);color:#fcd34d;margin-bottom:4px;">⏳ Loading AI Model...</div>
+    <div class="sp-time">
+      <div class="sp-time-dot"></div>
+      About 1 minute to complete
+    </div>
+  </div>
+
+  <div class="splash-card">
+    <div class="sc-kicker">Patient Intake</div>
+    <div class="sc-title">Begin your screening</div>
+    <div class="sc-sub">8 health questions, then AI analyzes your lesion photo. Powered by MobileNetV2 trained on 25,331 dermoscopic images (ISIC 2019). 81% melanoma recall at optimized threshold.</div>
+
+    <div class="sc-steps">
+      <div class="sc-step">
+        <div class="sc-step-n">1–4</div>
+        <div class="sc-step-label">Demographics & vitals</div>
+        <div class="sc-step-time">30 sec</div>
+      </div>
+      <div class="sc-step">
+        <div class="sc-step-n">5–8</div>
+        <div class="sc-step-label">Health & lesion history</div>
+        <div class="sc-step-time">30 sec</div>
+      </div>
+      <div class="sc-step">
+        <div class="sc-step-n">📷</div>
+        <div class="sc-step-label">Photograph your lesion</div>
+        <div class="sc-step-time">20 sec</div>
+      </div>
+    </div>
+
+    <button class="btn-splash" onclick="goTo('s-q1')">
+      Start Screening
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+    </button>
+
+    <div class="sc-footer">
+      <div class="sc-disclaimer">⚠ Research only · Not a medical diagnosis</div>
+      <button class="sc-api" onclick="goTo('s-settings')">⚙ API Key</button>
+    </div>
+  </div>
+</div>
+
+
+  <div style="margin-top:auto;padding:12px 20px calc(var(--safe-bot) + 12px);text-align:center;">
+    <div style="font-size:10px;color:rgba(255,255,255,0.35);line-height:1.6;">
+      <div style="font-weight:800;color:rgba(255,255,255,0.75);margin-bottom:4px;font-size:12px;letter-spacing:.04em;">🏆 3M Young Scientist Challenge 2026</div>
+    </div>
+  </div>
+
+<!-- ══════════════════════════
+  Q1 — Age & Sex
+══════════════════════════ -->
+<div class="screen" id="s-q1">
+  <div class="survey-screen">
+    <div class="sbar">
+      <div class="sbar-back" onclick="goTo('s-splash')">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+      </div>
+      <div class="sbar-progress-wrap">
+        <div class="sbar-label">Step 1 of 8</div>
+        <div class="progress-track">
+          <div class="pd cur"></div><div class="pd"></div><div class="pd"></div><div class="pd"></div>
+          <div class="pd"></div><div class="pd"></div><div class="pd"></div><div class="pd"></div>
+        </div>
+        <div style="position:relative;height:22px;margin-top:4px;"><span style="position:absolute;left:6.2%;transform:translateX(-50%);background:rgba(147,197,253,0.2);border:1px solid rgba(147,197,253,0.35);border-radius:12px;padding:2px 10px;font-size:9px;font-weight:700;color:#93c5fd;letter-spacing:.04em;white-space:nowrap;">Demographics</span></div>
+      </div>
+    </div>
+    <div class="qbody">
+      <div class="q-eyebrow">Demographics</div>
+      <div class="q-title">Age & sex</div>
+      <div class="slider-wrap">
+        <div class="slider-display">
+          <span class="slider-num" style="font-size:32px" id="age-v">42</span><span class="slider-unit">yrs</span>
+        </div>
+        <input type="range" min="1" max="100" value="42" oninput="document.getElementById('age-v').textContent=this.value" id="age-sl">
+        <div class="slider-limits"><span>1</span><span>50</span><span>100</span></div>
+      </div>
+      <div class="q-section">Biological sex</div>
+      <div class="opts grid2">
+        <button class="opt" onclick="pick(this,'gender','male')"><span class="opt-main">♂ Male</span></button>
+        <button class="opt" onclick="pick(this,'gender','female')"><span class="opt-main">♀ Female</span></button>
+        <button class="opt" onclick="pick(this,'gender','other')"><span class="opt-main">⊕ Other</span></button>
+        <button class="opt" onclick="pick(this,'gender','na')"><span class="opt-main">— Prefer not</span></button>
+      </div>
+    <div style="padding:14px 0 12px;border-top:1px solid #e5e7eb;margin-top:auto;"><button class="btn-next" onclick="goTo('s-q2')">Continue <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg></button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════
+  Q2 — Height & Weight
+══════════════════════════ -->
+<div class="screen" id="s-q2">
+  <div class="survey-screen">
+    <div class="sbar">
+      <div class="sbar-back" onclick="goTo('s-q1')">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+      </div>
+      <div class="sbar-progress-wrap">
+        <div class="sbar-label">Step 2 of 8</div>
+        <div class="progress-track">
+          <div class="pd done"></div><div class="pd cur"></div><div class="pd"></div><div class="pd"></div>
+          <div class="pd"></div><div class="pd"></div><div class="pd"></div><div class="pd"></div>
+        </div>
+        <div style="position:relative;height:22px;margin-top:4px;"><span style="position:absolute;left:18.8%;transform:translateX(-50%);background:rgba(147,197,253,0.2);border:1px solid rgba(147,197,253,0.35);border-radius:12px;padding:2px 10px;font-size:9px;font-weight:700;color:#93c5fd;letter-spacing:.04em;white-space:nowrap;">Body Metrics</span></div>
+      </div>
+    </div>
+    <div class="qbody">
+      <div class="q-eyebrow">Body Metrics</div>
+      <div class="q-title">Height & weight</div>
+      <div class="q-sub">BMI is a contributing factor in dermatological risk models</div>
+      <div class="q-section">Height</div>
+      <div class="slider-wrap">
+        <div class="slider-display"><span class="slider-num" style="font-size:32px" id="h-v">170</span><span class="slider-unit">cm</span></div>
+        <input type="range" min="100" max="220" value="170" oninput="document.getElementById('h-v').textContent=this.value" id="h-sl">
+        <div class="slider-limits"><span>100</span><span>160</span><span>220</span></div>
+      </div>
+      <div class="q-section">Weight</div>
+      <div class="slider-wrap">
+        <div class="slider-display"><span class="slider-num" style="font-size:32px" id="w-v">72</span><span class="slider-unit">kg</span></div>
+        <input type="range" min="20" max="200" value="72" oninput="document.getElementById('w-v').textContent=this.value" id="w-sl">
+        <div class="slider-limits"><span>20</span><span>110</span><span>200</span></div>
+      </div>
+    <div style="padding:14px 0 12px;border-top:1px solid #e5e7eb;margin-top:auto;"><button class="btn-next" onclick="goTo('s-q3')">Continue <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg></button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════
+  Q3 — Skin Type
+══════════════════════════ -->
+<div class="screen" id="s-q3">
+  <div class="survey-screen">
+    <div class="sbar">
+      <div class="sbar-back" onclick="goTo('s-q2')">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+      </div>
+      <div class="sbar-progress-wrap">
+        <div class="sbar-label">Step 3 of 8</div>
+        <div class="progress-track">
+          <div class="pd done"></div><div class="pd done"></div><div class="pd cur"></div><div class="pd"></div>
+          <div class="pd"></div><div class="pd"></div><div class="pd"></div><div class="pd"></div>
+        </div>
+        <div style="position:relative;height:22px;margin-top:4px;"><span style="position:absolute;left:31.2%;transform:translateX(-50%);background:rgba(147,197,253,0.2);border:1px solid rgba(147,197,253,0.35);border-radius:12px;padding:2px 10px;font-size:9px;font-weight:700;color:#93c5fd;letter-spacing:.04em;white-space:nowrap;">Skin Profile</span></div>
+      </div>
+    </div>
+    <div class="qbody">
+      <div class="q-eyebrow">Skin Profile</div>
+      <div class="q-title">Fitzpatrick skin type</div>
+      <div class="q-sub">Your skin's UV sensitivity affects melanoma risk significantly</div>
+      <div class="opts grid3">
+        <button class="opt" onclick="pick(this,'skin','I')" style="flex-direction:column;align-items:flex-start;gap:2px">
+          <span class="opt-main">Type I</span><span class="opt-sub">Always burns</span>
+        </button>
+        <button class="opt" onclick="pick(this,'skin','II')" style="flex-direction:column;align-items:flex-start;gap:2px">
+          <span class="opt-main">Type II</span><span class="opt-sub">Burns easily</span>
+        </button>
+        <button class="opt" onclick="pick(this,'skin','III')" style="flex-direction:column;align-items:flex-start;gap:2px">
+          <span class="opt-main">Type III</span><span class="opt-sub">Sometimes</span>
+        </button>
+        <button class="opt" onclick="pick(this,'skin','IV')" style="flex-direction:column;align-items:flex-start;gap:2px">
+          <span class="opt-main">Type IV</span><span class="opt-sub">Rarely burns</span>
+        </button>
+        <button class="opt" onclick="pick(this,'skin','V')" style="flex-direction:column;align-items:flex-start;gap:2px">
+          <span class="opt-main">Type V</span><span class="opt-sub">Very rarely</span>
+        </button>
+        <button class="opt" onclick="pick(this,'skin','VI')" style="flex-direction:column;align-items:flex-start;gap:2px">
+          <span class="opt-main">Type VI</span><span class="opt-sub">Never burns</span>
+        </button>
+      </div>
+    <div style="padding:14px 0 12px;border-top:1px solid #e5e7eb;margin-top:auto;"><button class="btn-next" onclick="goTo('s-q4')">Continue <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg></button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════
+  Q4 — Blood Pressure & Smoking
+══════════════════════════ -->
+<div class="screen" id="s-q4">
+  <div class="survey-screen">
+    <div class="sbar">
+      <div class="sbar-back" onclick="goTo('s-q3')">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+      </div>
+      <div class="sbar-progress-wrap">
+        <div class="sbar-label">Step 4 of 8</div>
+        <div class="progress-track">
+          <div class="pd done"></div><div class="pd done"></div><div class="pd done"></div><div class="pd cur"></div>
+          <div class="pd"></div><div class="pd"></div><div class="pd"></div><div class="pd"></div>
+        </div>
+        <div style="position:relative;height:22px;margin-top:4px;"><span style="position:absolute;left:43.8%;transform:translateX(-50%);background:rgba(147,197,253,0.2);border:1px solid rgba(147,197,253,0.35);border-radius:12px;padding:2px 10px;font-size:9px;font-weight:700;color:#93c5fd;letter-spacing:.04em;white-space:nowrap;">Cardiovascular</span></div>
+      </div>
+    </div>
+    <div class="qbody">
+      <div class="q-eyebrow">Cardiovascular Health</div>
+      <div class="q-title">Blood pressure</div>
+      <div class="q-sub">Hypertension has been linked to increased melanoma susceptibility in clinical studies</div>
+      <div class="opts">
+        <button class="opt" onclick="pick(this,'bp','normal')">
+          <span class="opt-icon">💚</span><div class="opt-body"><span class="opt-main">Normal</span><span class="opt-sub">Below 120/80 mmHg</span></div>
+        </button>
+        <button class="opt" onclick="pick(this,'bp','elevated')">
+          <span class="opt-icon">🟡</span><div class="opt-body"><span class="opt-main">Elevated</span><span class="opt-sub">120–129 systolic</span></div>
+        </button>
+        <button class="opt" onclick="pick(this,'bp','high')">
+          <span class="opt-icon">🔴</span><div class="opt-body"><span class="opt-main">High (Hypertension)</span><span class="opt-sub">130+ / 80+ mmHg or on medication</span></div>
+        </button>
+        <button class="opt" onclick="pick(this,'bp','unknown')">
+          <span class="opt-icon">❓</span><div class="opt-body"><span class="opt-main">Unknown</span></div>
+        </button>
+      </div>
+      <div class="q-section">Smoking status</div>
+      <div class="opts grid2">
+        <button class="opt" onclick="pick(this,'smoke','never')"><span class="opt-main">🚭 Never</span></button>
+        <button class="opt" onclick="pick(this,'smoke','former')"><span class="opt-main">⬅ Former</span></button>
+        <button class="opt" onclick="pick(this,'smoke','current')"><span class="opt-main">🚬 Current</span></button>
+        <button class="opt" onclick="pick(this,'smoke','unknown')"><span class="opt-main">❓ Unknown</span></button>
+      </div>
+    <div style="padding:14px 0 12px;border-top:1px solid #e5e7eb;margin-top:auto;"><button class="btn-next" onclick="goTo('s-q5')">Continue <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg></button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════
+  Q5 — Diabetes & Immune
+══════════════════════════ -->
+<div class="screen" id="s-q5">
+  <div class="survey-screen">
+    <div class="sbar">
+      <div class="sbar-back" onclick="goTo('s-q4')">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+      </div>
+      <div class="sbar-progress-wrap">
+        <div class="sbar-label">Step 5 of 8</div>
+        <div class="progress-track">
+          <div class="pd done"></div><div class="pd done"></div><div class="pd done"></div><div class="pd done"></div>
+          <div class="pd cur"></div><div class="pd"></div><div class="pd"></div><div class="pd"></div>
+        </div>
+        <div style="position:relative;height:22px;margin-top:4px;"><span style="position:absolute;left:56.2%;transform:translateX(-50%);background:rgba(147,197,253,0.2);border:1px solid rgba(147,197,253,0.35);border-radius:12px;padding:2px 10px;font-size:9px;font-weight:700;color:#93c5fd;letter-spacing:.04em;white-space:nowrap;">Medical History</span></div>
+      </div>
+    </div>
+    <div class="qbody">
+      <div class="q-eyebrow">Medical History</div>
+      <div class="q-title">Existing conditions</div>
+      <div class="q-sub">These conditions affect immune function and skin cancer risk</div>
+      <div class="q-section">Diabetes</div>
+      <div class="opts grid2">
+        <button class="opt" onclick="pick(this,'diabetes','no')"><span class="opt-main">No</span></button>
+        <button class="opt" onclick="pick(this,'diabetes','type1')"><span class="opt-main">Type 1</span></button>
+        <button class="opt" onclick="pick(this,'diabetes','type2')"><span class="opt-main">Type 2</span></button>
+        <button class="opt" onclick="pick(this,'diabetes','pre')"><span class="opt-main">Pre-diabetic</span></button>
+      </div>
+      <div class="q-section">Immune system</div>
+      <div class="opts">
+        <button class="opt" onclick="pick(this,'immune','normal')">
+          <span class="opt-icon">🛡️</span><div class="opt-body"><span class="opt-main">Normal immune function</span></div>
+        </button>
+        <button class="opt" onclick="pick(this,'immune','suppressed')">
+          <span class="opt-icon">⚠️</span><div class="opt-body"><span class="opt-main">Immunosuppressed</span><span class="opt-sub">Transplant recipient, HIV, autoimmune medication</span></div>
+        </button>
+        <button class="opt" onclick="pick(this,'immune','unknown')">
+          <span class="opt-icon">❓</span><div class="opt-body"><span class="opt-main">Unsure</span></div>
+        </button>
+      </div>
+    <div style="padding:14px 0 12px;border-top:1px solid #e5e7eb;margin-top:auto;"><button class="btn-next" onclick="goTo('s-q6')">Continue <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg></button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════
+  Q6 — Sun exposure & Family History
+══════════════════════════ -->
+<div class="screen" id="s-q6">
+  <div class="survey-screen">
+    <div class="sbar">
+      <div class="sbar-back" onclick="goTo('s-q5')">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+      </div>
+      <div class="sbar-progress-wrap">
+        <div class="sbar-label">Step 6 of 8</div>
+        <div class="progress-track">
+          <div class="pd done"></div><div class="pd done"></div><div class="pd done"></div><div class="pd done"></div>
+          <div class="pd done"></div><div class="pd cur"></div><div class="pd"></div><div class="pd"></div>
+        </div>
+        <div style="position:relative;height:22px;margin-top:4px;"><span style="position:absolute;left:68.8%;transform:translateX(-50%);background:rgba(147,197,253,0.2);border:1px solid rgba(147,197,253,0.35);border-radius:12px;padding:2px 10px;font-size:9px;font-weight:700;color:#93c5fd;letter-spacing:.04em;white-space:nowrap;">Risk Factors</span></div>
+      </div>
+    </div>
+    <div class="qbody">
+      <div class="q-eyebrow">Risk Factors</div>
+      <div class="q-title">Sun exposure & family</div>
+      <div class="q-section">Lifetime sun exposure</div>
+      <div class="opts">
+        <button class="opt" onclick="pick(this,'sun','low')">
+          <span class="opt-icon">🏠</span><div class="opt-body"><span class="opt-main">Low</span><span class="opt-sub">Mostly indoors, regular sunscreen use</span></div>
+        </button>
+        <button class="opt" onclick="pick(this,'sun','moderate')">
+          <span class="opt-icon">⛅</span><div class="opt-body"><span class="opt-main">Moderate</span><span class="opt-sub">Occasional outdoor activities</span></div>
+        </button>
+        <button class="opt" onclick="pick(this,'sun','high')">
+          <span class="opt-icon">☀️</span><div class="opt-body"><span class="opt-main">High</span><span class="opt-sub">Outdoor work or frequent sun without protection</span></div>
+        </button>
+        <button class="opt" onclick="pick(this,'sun','tanning')">
+          <span class="opt-icon">🏖️</span><div class="opt-body"><span class="opt-main">History of tanning / sunbeds</span></div>
+        </button>
+      </div>
+      <div class="q-section">Family history of skin cancer</div>
+      <div class="opts grid2">
+        <button class="opt" onclick="pick(this,'fhx','none')"><span class="opt-main">None</span></button>
+        <button class="opt" onclick="pick(this,'fhx','melanoma')"><span class="opt-main">Melanoma ⚠️</span></button>
+        <button class="opt" onclick="pick(this,'fhx','other')"><span class="opt-main">Other skin cancer</span></button>
+        <button class="opt" onclick="pick(this,'fhx','unknown')"><span class="opt-main">Unknown</span></button>
+      </div>
+    <div style="padding:14px 0 12px;border-top:1px solid #e5e7eb;margin-top:auto;"><button class="btn-next" onclick="goTo('s-q7')">Continue <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg></button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════
+  Q7 — Previous Cancer / Medications
+══════════════════════════ -->
+<div class="screen" id="s-q7">
+  <div class="survey-screen">
+    <div class="sbar">
+      <div class="sbar-back" onclick="goTo('s-q6')">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+      </div>
+      <div class="sbar-progress-wrap">
+        <div class="sbar-label">Step 7 of 8</div>
+        <div class="progress-track">
+          <div class="pd done"></div><div class="pd done"></div><div class="pd done"></div><div class="pd done"></div>
+          <div class="pd done"></div><div class="pd done"></div><div class="pd cur"></div><div class="pd"></div>
+        </div>
+        <div style="position:relative;height:22px;margin-top:4px;"><span style="position:absolute;left:81.2%;transform:translateX(-50%);background:rgba(147,197,253,0.2);border:1px solid rgba(147,197,253,0.35);border-radius:12px;padding:2px 10px;font-size:9px;font-weight:700;color:#93c5fd;letter-spacing:.04em;white-space:nowrap;">Clinical History</span></div>
+      </div>
+    </div>
+    <div class="qbody">
+      <div class="q-eyebrow">Clinical History</div>
+      <div class="q-title">Cancer & medications</div>
+      <div class="q-section">Prior cancer diagnosis</div>
+      <div class="opts">
+        <button class="opt" onclick="pick(this,'priorca','none')">
+          <span class="opt-icon">✅</span><div class="opt-body"><span class="opt-main">No prior cancer</span></div>
+        </button>
+        <button class="opt" onclick="pick(this,'priorca','skin')">
+          <span class="opt-icon">🔬</span><div class="opt-body"><span class="opt-main">Previous skin cancer</span><span class="opt-sub">Melanoma, BCC, SCC or other</span></div>
+        </button>
+        <button class="opt" onclick="pick(this,'priorca','other')">
+          <span class="opt-icon">🏥</span><div class="opt-body"><span class="opt-main">Other cancer (non-skin)</span></div>
+        </button>
+      </div>
+      <div class="q-section">Current medications affecting skin</div>
+      <div class="opts">
+        <button class="opt" onclick="pick(this,'meds','none')">
+          <span class="opt-icon">💊</span><div class="opt-body"><span class="opt-main">None relevant</span></div>
+        </button>
+        <button class="opt" onclick="pick(this,'meds','immunosuppressant')">
+          <span class="opt-icon">⚠️</span><div class="opt-body"><span class="opt-main">Immunosuppressants</span><span class="opt-sub">Steroids, biologics, transplant meds</span></div>
+        </button>
+        <button class="opt" onclick="pick(this,'meds','photosensitising')">
+          <span class="opt-icon">☀️</span><div class="opt-body"><span class="opt-main">Photosensitising drugs</span><span class="opt-sub">Tetracyclines, diuretics, some antidepressants</span></div>
+        </button>
+      </div>
+    <div style="padding:14px 0 12px;border-top:1px solid #e5e7eb;margin-top:auto;"><button class="btn-next" onclick="goTo('s-q8')">Continue <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg></button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════
+  Q8 — Lesion Changes
+══════════════════════════ -->
+<div class="screen" id="s-q8">
+  <div class="survey-screen">
+    <div class="sbar">
+      <div class="sbar-back" onclick="goTo('s-q7')">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+      </div>
+      <div class="sbar-progress-wrap">
+        <div class="sbar-label">Step 8 of 8</div>
+        <div class="progress-track">
+          <div class="pd done"></div><div class="pd done"></div><div class="pd done"></div><div class="pd done"></div>
+          <div class="pd done"></div><div class="pd done"></div><div class="pd done"></div><div class="pd cur"></div>
+        </div>
+        <div style="position:relative;height:22px;margin-top:4px;"><span style="position:absolute;left:93.8%;transform:translateX(-50%);background:rgba(147,197,253,0.2);border:1px solid rgba(147,197,253,0.35);border-radius:12px;padding:2px 10px;font-size:9px;font-weight:700;color:#93c5fd;letter-spacing:.04em;white-space:nowrap;">Lesion History</span></div>
+      </div>
+    </div>
+    <div class="qbody">
+      <div class="q-eyebrow">Lesion History</div>
+      <div class="q-title">Recent changes</div>
+      <div class="q-sub">Have you noticed anything different about this lesion in the past 3 months?</div>
+      <div class="opts">
+        <button class="opt" onclick="pick(this,'changes','none')">
+          <span class="opt-icon">✅</span><div class="opt-body"><span class="opt-main">No changes noticed</span></div>
+        </button>
+        <button class="opt" onclick="pick(this,'changes','size')">
+          <span class="opt-icon">📏</span><div class="opt-body"><span class="opt-main">Growing in size</span></div>
+        </button>
+        <button class="opt" onclick="pick(this,'changes','color')">
+          <span class="opt-icon">🎨</span><div class="opt-body"><span class="opt-main">Color change</span><span class="opt-sub">Darker, lighter, or new colours appearing</span></div>
+        </button>
+        <button class="opt" onclick="pick(this,'changes','bleeding')">
+          <span class="opt-icon">🩸</span><div class="opt-body"><span class="opt-main">Bleeding, itching or crusting</span></div>
+        </button>
+        <button class="opt" onclick="pick(this,'changes','multiple')">
+          <span class="opt-icon">⚠️</span><div class="opt-body"><span class="opt-main">Multiple changes</span></div>
+        </button>
+      </div>
+    <div style="padding:14px 0 12px;border-top:1px solid #e5e7eb;margin-top:auto;"><button class="btn-next" onclick="goTo('s-photo')">Next: Take Photo <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg></button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════
+  PHOTO
+══════════════════════════ -->
+<div class="screen" id="s-photo">
+  <div class="survey-screen">
+  <div class="sbar">
+    <div class="sbar-back" onclick="goTo('s-q8')">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+    </div>
+    <div class="sbar-progress-wrap">
+      <div class="sbar-label">Almost done</div>
+      <div class="progress-track">
+        <div class="pd done"></div><div class="pd done"></div><div class="pd done"></div><div class="pd done"></div>
+        <div class="pd done"></div><div class="pd done"></div><div class="pd done"></div><div class="pd done"></div>
+      </div>
+    </div>
+  </div>
+  <div class="photo-body">
+    <div>
+      <div class="q-eyebrow">Final Step</div>
+      <div class="q-title">Photo of your lesion</div>
+      <div class="q-sub">Clear, close-up, good lighting. Avoid shadows.</div>
+    </div>
+    <div class="upload-zone" id="upload-zone" onclick="triggerUpload()">
+      <input type="file" id="file-input" accept="image/*" onchange="handleFile(event)" onclick="event.stopPropagation()">
+      <img id="preview-img" alt="Preview">
+      <div id="up-placeholder">
+        <span class="up-icon">🖼️</span>
+        <h3>Upload a photo</h3>
+        <p>Tap to choose from your gallery</p>
+      </div>
+    </div>
+    <div class="cam-wrap" id="cam-wrap">
+      <video id="cam-video" autoplay playsinline muted></video>
+      <div class="cam-frame-abs">
+        <div class="cf">
+          <div class="cc cc-tl"></div><div class="cc cc-tr"></div>
+          <div class="cc cc-bl"></div><div class="cc cc-br"></div>
+          <div class="cam-scanline"></div>
+        </div>
+      </div>
+      <div class="cam-overlay">
+        <div class="cam-controls">
+          <button class="cam-sm" onclick="flipCam()">⟳ Flip</button>
+          <button class="cam-capture" onclick="capturePhoto()">
+            <svg fill="none" viewBox="0 0 24 24" stroke="#1e3a8a" stroke-width="2.5"><circle cx="12" cy="12" r="8"/></svg>
+          </button>
+          <button class="cam-sm" onclick="stopCam()">✕</button>
+        </div>
+      </div>
+    </div>
+    <button class="btn-cam" id="cam-btn" onclick="startCam()">
+      <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      Use Camera
+    </button>
+    <div style="padding:14px 0 12px;border-top:1px solid #e5e7eb;margin-top:auto;">
+      <button class="btn-next" id="analyze-btn" onclick="runAnalysis()" disabled>
+        <div class="shimmer"></div>
+        <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Analyze Lesion
+      </button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════════════
+  ANALYZING
+══════════════════════════ -->
+<div class="screen" id="s-analyzing">
+  <div class="ao-wrap">
+    <div class="ao-spin"></div>
+    <div class="ao-title">Analyzing…</div>
+    <div class="ao-sub">AI is analyzing your skin lesion</div>
+    <ul class="ao-steps">
+      <li id="ao1"><span class="ao-ico">·</span> Preprocessing image</li>
+      <li id="ao2"><span class="ao-ico">·</span> Evaluating ABCDE criteria</li>
+      <li id="ao3"><span class="ao-ico">·</span> Incorporating health profile</li>
+      <li id="ao4"><span class="ao-ico">·</span> Generating risk report</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ══════════════════════════
+  RESULTS
+══════════════════════════ -->
+<div class="screen" id="s-results">
+  <div class="sbar" style="position:relative">
+    <div class="sbar-back" onclick="goTo('s-splash');resetAll()">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+    </div>
+    <div class="sbar-progress-wrap">
+      <div class="sbar-label">Results</div>
+    </div>
+  </div>
+  <div class="results-body">
+    <div id="risk-pill-wrap"></div>
+    <div class="res-title" id="res-title">—</div>
+    <div class="res-desc" id="res-desc">—</div>
+    <img id="res-thumb" alt="">
+    <div class="abcde-row" id="abcde-row"></div>
+    <div class="conf-row">
+      <span class="conf-label">AI Confidence</span>
+      <div class="conf-track"><div class="conf-fill" id="conf-fill" style="width:0%"></div></div>
+      <span class="conf-val" id="conf-val">—</span>
+    </div>
+    <div class="findings" id="findings-list"></div>
+    <div class="disclaimer-box">⚠ <strong>Medical Disclaimer:</strong> DermAI is an AI screening tool created for the 3M Young Scientist Challenge 2026. It is NOT a medical diagnosis. Always consult a board-certified dermatologist for any skin concerns. Powered by MobileNetV2 on ISIC 2019 (25,331 images) with two-stage training, Focal Loss, CLAHE, oversampling, and threshold tuning. 81% melanoma recall.</div>
+  </div>
+  <div class="res-foot">
+    <button class="btn-next" onclick="goTo('s-splash');resetAll()">Start New Screening</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════
+  SETTINGS
+══════════════════════════ -->
+<div class="screen" id="s-settings">
+  <div class="sbar" style="position:relative">
+    <div class="sbar-back" onclick="goTo('s-splash')">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+    </div>
+    <div class="sbar-progress-wrap">
+      <div class="sbar-label">Settings</div>
+    </div>
+  </div>
+  <div class="settings-body">
+    <div>
+      <label class="input-label">Anthropic API Key</label>
+      <input type="password" class="input-field" id="api-key-input" placeholder="sk-ant-api03-xxxxxxxx">
+      <div class="help-text">Required for Claude Vision analysis. Get yours at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>. Stored in this session only.</div>
+    </div>
+    <button class="btn-next" onclick="saveKey()">Save Key</button>
+  </div>
+</div>
+
+</div><!-- #app -->
+<canvas id="snap-canvas" style="display:none"></canvas>
+
+<script>
+let anthropicKey='';
+
+// ==============================
+// TF.js MobileNetV2 Model (ISIC 2019)
+// ==============================
+let tfModel = null;
+let modelLoaded = false;
+const TF_MODEL_URL = './model/model.json';
+const CLASS_LABELS = ['akiec', 'bcc', 'bkl', 'df', 'mel', 'nv', 'vasc'];
+const CLASS_NAMES_MAP = {
+  'akiec': 'Actinic Keratosis', 'bcc': 'Basal Cell Carcinoma',
+  'bkl': 'Benign Keratosis', 'df': 'Dermatofibroma',
+  'mel': 'Melanoma', 'nv': 'Melanocytic Nevi', 'vasc': 'Vascular Lesion'
+};
+const CLASS_RISK_MAP = {
+  'mel': 'high', 'bcc': 'high', 'akiec': 'medium',
+  'bkl': 'low', 'df': 'low', 'nv': 'low', 'vasc': 'medium'
+};
+const CLASS_DESC_MAP = {
+  'mel': 'Melanoma is the most dangerous form of skin cancer. Early detection is critical \u2014 please consult a dermatologist immediately.',
+  'bcc': 'Basal Cell Carcinoma is the most common skin cancer. Grows slowly but should be treated by a dermatologist.',
+  'akiec': 'Actinic Keratosis is a pre-cancerous lesion from sun damage. Can develop into squamous cell carcinoma if untreated.',
+  'bkl': 'Benign Keratosis is a harmless growth. No treatment necessary unless it causes irritation.',
+  'df': 'Dermatofibroma is a benign, firm skin nodule. Harmless and typically needs no treatment.',
+  'nv': 'Melanocytic Nevi (common mole) is benign. Monitor for changes in size, shape, or color (ABCDE rule).',
+  'vasc': 'Vascular Lesion is a blood vessel abnormality. Most are benign but should be evaluated if changing.'
+};
+const MELANOMA_THRESHOLD = 0.25;
+const MELANOMA_IDX = CLASS_LABELS.indexOf('mel');
+const IMG_SIZE = 299;
+const MEAN = [0.485, 0.456, 0.406];
+const STD = [0.229, 0.224, 0.225];
+
+async function loadTFModel() {
+  try {
+    console.log('Loading TF.js model from:', TF_MODEL_URL);
+    // Register custom FocalLoss for compatibility
+    tfModel = await tf.loadGraphModel(TF_MODEL_URL, {
+      strict: false
+    });
+    modelLoaded = true;
+    console.log('\u2705 TF.js model loaded successfully');
+    const statusEl = document.getElementById('model-status');
+    if (statusEl) statusEl.textContent = '\u2705 AI Model Ready';
+    document.title = 'DermaScan - Model Ready';
+    const s = document.getElementById('model-status');
+    if(s){ s.style.background='rgba(74,222,128,0.2)'; s.style.borderColor='rgba(74,222,128,0.4)'; s.style.color='#86efac'; s.textContent='✅ AI Model Ready'; }
+  } catch(err) {
+    console.error('TF.js model load failed:', err);
+    const statusEl = document.getElementById('model-status');
+    if (statusEl) statusEl.textContent = '\u26a0 ERROR: ' + err.message;
+    document.title = 'ERROR: ' + err.message;
+    const s2 = document.getElementById('model-status');
+    if(s2){ s2.style.background='rgba(239,68,68,0.2)'; s2.style.borderColor='rgba(239,68,68,0.4)'; s2.style.color='#fca5a5'; s2.textContent='❌ Model Error: ' + err.message; }
+    console.error('Model load error:', err.message);
+  }
+}
+
+function preprocessTensor(imgElement) {
+  return tf.tidy(() => {
+    let t = tf.browser.fromPixels(imgElement)
+      .resizeBilinear([IMG_SIZE, IMG_SIZE]).toFloat().div(255.0);
+    const mean = tf.tensor1d(MEAN);
+    const std = tf.tensor1d(STD);
+    return t.sub(mean).div(std).expandDims(0);
+  });
+}
+
+async function predictWithTTA(imgElement) {
+  const base = preprocessTensor(imgElement);
+  const augments = [
+    base,
+    tf.tidy(() => base.reverse(2)),  // H-flip
+    tf.tidy(() => base.reverse(1)),  // V-flip
+    tf.tidy(() => base.reverse(2).reverse(1)),  // Both flips
+    tf.tidy(() => {  // Brightness
+      const m = tf.tensor1d(MEAN), s = tf.tensor1d(STD);
+      return base.mul(s).add(m).mul(1.1).clipByValue(0,1).sub(m).div(s);
+    })
+  ];
+  const preds = [];
+  for (const aug of augments) {
+    const p = tfModel.predict(aug);
+    preds.push(Array.from(await p.data()));
+    p.dispose();
+    if (aug !== base) aug.dispose();
+  }
+  base.dispose();
+  // Average
+  const avg = new Array(CLASS_LABELS.length).fill(0);
+  for (const p of preds) for (let i=0;i<p.length;i++) avg[i] += p[i]/preds.length;
+  // Threshold
+  let cls = avg.indexOf(Math.max(...avg));
+  if (avg[MELANOMA_IDX] >= MELANOMA_THRESHOLD) cls = MELANOMA_IDX;
+  return { probs: avg, predicted: CLASS_LABELS[cls], confidence: avg[cls] };
+}
+
+
+// Register Keras 3 L2 regularizer for TF.js compatibility
+// Register custom classes and load model after TF.js is ready
+function initTFModel() {
+  try {
+    class L2Regularizer {
+      constructor(config) { this.l2 = config && config.l2 ? config.l2 : 0.01; }
+      apply(x) { return tf.tidy(() => tf.mul(tf.scalar(this.l2), tf.sum(tf.square(x)))); }
+      getConfig() { return { l2: this.l2 }; }
+      static get className() { return 'l2'; }
+    }
+    class L2RegularizerUpper {
+      constructor(config) { this.l2 = config && config.l2 ? config.l2 : 0.01; }
+      apply(x) { return tf.tidy(() => tf.mul(tf.scalar(this.l2), tf.sum(tf.square(x)))); }
+      getConfig() { return { l2: this.l2 }; }
+      static get className() { return 'L2'; }
+    }
+    if(tf.serialization && tf.serialization.registerClass) {
+      tf.serialization.registerClass(L2Regularizer);
+      tf.serialization.registerClass(L2RegularizerUpper);
+      console.log('✅ L2 regularizer registered');
+    }
+    loadTFModel();
+  } catch(e) { console.warn('TF init error:', e.message); loadTFModel(); }
+}
+
+// Wait for TF.js script to load then init
+async function startInit() {
+  // Small delay to let browser render first
+  await new Promise(r => setTimeout(r, 500));
+  initTFModel();
+}
+
+if(typeof tf !== 'undefined') {
+  startInit();
+} else {
+  window.addEventListener('load', () => setTimeout(initTFModel, 500));
+}
+
+let capturedBase64=null;
+let camStream=null;
+let facingMode='environment';
+let survey={};
+
+function goTo(id){
+  const cur=document.querySelector('.screen.active');
+  if(cur){
+    cur.classList.add('exit');
+    setTimeout(()=>cur.classList.remove('active','exit'), 300);
+  }
+  const next=document.getElementById(id);
+  if(next){
+    setTimeout(()=>{
+      next.classList.add('active');
+      next.scrollTop=0;
+    }, cur ? 50 : 0);
+  }
+}
+
+function pick(btn,key,val){
+  const group=btn.closest('.opts');
+  group.querySelectorAll('.opt').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  survey[key]=val;
+}
+
+function triggerUpload(){
+  if(document.getElementById('preview-img').style.display==='block') return;
+  document.getElementById('file-input').click();
+}
+
+function handleFile(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const src=ev.target.result;
+    capturedBase64=src.split(',')[1];
+    const img=document.getElementById('preview-img');
+    img.src=src;img.style.display='block';
+    document.getElementById('up-placeholder').style.display='none';
+    document.getElementById('upload-zone').classList.add('has-img');
+    stopCam();
+    document.getElementById('analyze-btn').disabled=false;
+  };
+  reader.readAsDataURL(file);
+}
+
+function startCam(){
+  document.getElementById('cam-wrap').style.display='block';
+  document.getElementById('cam-btn').style.display='none';
+  initCam();
+}
+async function initCam(){
+  try{
+    if(camStream)camStream.getTracks().forEach(t=>t.stop());
+    camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode,width:{ideal:1280},height:{ideal:1280}}});
+    document.getElementById('cam-video').srcObject=camStream;
+  }catch(e){console.error('Camera error:', e.message);stopCam();}
+}
+function flipCam(){facingMode=facingMode==='environment'?'user':'environment';initCam();}
+function stopCam(){
+  if(camStream){camStream.getTracks().forEach(t=>t.stop());camStream=null;}
+  document.getElementById('cam-wrap').style.display='none';
+  document.getElementById('cam-btn').style.display='flex';
+}
+function capturePhoto(){
+  const v=document.getElementById('cam-video');
+  const c=document.getElementById('snap-canvas');
+  const sz=Math.min(v.videoWidth,v.videoHeight);
+  c.width=sz;c.height=sz;
+  c.getContext('2d').drawImage(v,(v.videoWidth-sz)/2,(v.videoHeight-sz)/2,sz,sz,0,0,sz,sz);
+  capturedBase64=c.toDataURL('image/jpeg',.92).split(',')[1];
+  const img=document.getElementById('preview-img');
+  img.src='data:image/jpeg;base64,'+capturedBase64;img.style.display='block';
+  document.getElementById('up-placeholder').style.display='none';
+  document.getElementById('upload-zone').classList.add('has-img');
+  stopCam();
+  document.getElementById('analyze-btn').disabled=false;
+}
+
+
+// ==============================
+// TF.js Analysis (Primary Method)
+// ==============================
+async function analyzeWithTFJS() {
+  if (!modelLoaded || !tfModel) return null;
+  try {
+    // Create an image element from captured base64
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+      img.src = 'data:image/jpeg;base64,' + capturedBase64;
+    });
+    const result = await predictWithTTA(img);
+    return result;
+  } catch(err) {
+    console.error('TF.js prediction failed:', err);
+    console.error('Prediction error:', err.message);
+    return null;
+  }
+}
+
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function aoStep(n,state){
+  const el=document.getElementById('ao'+n);
+  el.className=state;
+  el.querySelector('.ao-ico').textContent=state==='done'?'✓':state==='act'?'›':'·';
+}
+
+async function runAnalysis(){
+  if(!capturedBase64)return;
+  if(!modelLoaded || !tfModel){
+    // Wait up to 15 seconds for model to load
+    document.getElementById('analyze-btn').textContent = 'Loading AI Model...';
+    for(let i=0;i<30;i++){
+      await new Promise(r=>setTimeout(r,500));
+      if(modelLoaded && tfModel) break;
+    }
+    if(!modelLoaded || !tfModel){
+      alert('Model failed to load. Please refresh the page and try again.');
+      document.getElementById('analyze-btn').textContent = 'Analyze Lesion';
+      return;
+    }
+    document.getElementById('analyze-btn').textContent = 'Analyze Lesion';
+  }
+  goTo('s-analyzing');
+  aoStep(1,'act');await sleep(500);aoStep(1,'done');
+  aoStep(2,'act');
+
+  let result;
+
+  // ==============================
+  // PRIMARY: TF.js MobileNetV2 (runs in browser, no API needed)
+  // ==============================
+
+  if(modelLoaded && tfModel){
+    try{
+      console.log('Using TF.js MobileNetV2 for analysis...');
+      const tfResult = await analyzeWithTFJS();
+      if(tfResult){
+        const cls = tfResult.predicted;
+        const conf = Math.round(tfResult.confidence * 100);
+        const risk = CLASS_RISK_MAP[cls] || 'medium';
+        const name = CLASS_NAMES_MAP[cls] || cls;
+        const desc = CLASS_DESC_MAP[cls] || 'Please consult a dermatologist for evaluation.';
+
+        // Build probability findings
+        const findings = [];
+        const sorted = tfResult.probs.map((p,i)=>({label:CLASS_LABELS[i],prob:p})).sort((a,b)=>b.prob-a.prob);
+        findings.push({severity: risk==='high'?'concern':risk==='medium'?'caution':'normal',
+          text: name+' detected with '+conf+'% confidence (MobileNetV2 · 81% Melanoma Recall)'});
+        if(sorted[1]) findings.push({severity:'normal',
+          text: 'Second prediction: '+CLASS_NAMES_MAP[sorted[1].label]+' ('+Math.round(sorted[1].prob*100)+'%)'});
+        if(cls==='mel'||cls==='bcc'||cls==='akiec') findings.push({severity:'concern',
+          text: 'This condition may require medical attention. Please consult a dermatologist.'});
+        findings.push({severity:'normal',
+          text: 'AI used melanoma threshold t=0.25 to prioritize cancer detection sensitivity.'});
+        findings.push({severity:'caution',
+          text: 'Model: MobileNetV2 on ISIC 2019 (25,331 images). Two-stage training, Focal Loss, CLAHE, oversampling. 81% melanoma recall at threshold 0.25.'});
+
+        result = {
+          riskLevel: risk,
+          riskTitle: name,
+          riskDescription: desc,
+          confidence: conf,
+          abcde: {
+            A:{score: cls==='mel'?'concern':'normal', note: cls==='mel'?'Check asymmetry':'Appears symmetric'},
+            B:{score: cls==='mel'||cls==='bcc'?'caution':'normal', note: cls==='mel'?'Irregular edges':'Regular border'},
+            C:{score: cls==='mel'?'concern':'normal', note: cls==='mel'?'Multiple colors':'Uniform color'},
+            D:{score: 'normal', note: 'Check with ruler'},
+            E:{score: cls==='mel'||cls==='akiec'?'caution':'normal', note: 'Monitor changes'}
+          },
+          findings: findings
+        };
+      }
+    }catch(err){
+      console.error('TF.js analysis failed:', err);
+      console.error('TF.js error:', err.message);
+    }
+  }
+
+  // ==============================
+  // FALLBACK: Anthropic API (if TF.js failed or not loaded)
+  // ==============================
+  if(!result && anthropicKey){
+    const age=document.getElementById('age-sl').value;
+    const h=document.getElementById('h-sl').value;
+    const w=document.getElementById('w-sl').value;
+    const bmi=(w/((h/100)**2)).toFixed(1);
+    const ctx=`Patient profile:
+- Age: ${age}, Gender: ${survey.gender||'not specified'}
+- Height: ${h}cm, Weight: ${w}kg, BMI: ${bmi}
+- Fitzpatrick skin type: ${survey.skin||'unknown'}
+- Blood pressure: ${survey.bp||'unknown'}, Smoking: ${survey.smoke||'unknown'}
+- Diabetes: ${survey.diabetes||'unknown'}, Immune status: ${survey.immune||'unknown'}
+- Sun exposure history: ${survey.sun||'unknown'}
+- Family history of skin cancer: ${survey.fhx||'unknown'}
+- Prior cancer diagnosis: ${survey.priorca||'unknown'}
+- Current relevant medications: ${survey.meds||'none'}
+- Recent lesion changes: ${survey.changes||'not reported'}`;
+    try{
+      const resp=await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'x-api-key':anthropicKey,
+          'anthropic-version':'2023-06-01',
+          'anthropic-dangerous-direct-browser-access':'true'
+        },
+        body:JSON.stringify({
+          model:'claude-sonnet-4-20250514',
+          max_tokens:1000,
+          system:`You are a dermoscopy AI analyzing skin lesions for research. Return ONLY valid JSON, no markdown.
+Schema: {"riskLevel":"low"|"medium"|"high","riskTitle":string,"riskDescription":string(2 sentences max),"confidence":number(0-100),"abcde":{"A":{"score":"normal"|"caution"|"concern","note":string(max 4 words)},"B":{"score":"normal"|"caution"|"concern","note":string},"C":{"score":"normal"|"caution"|"concern","note":string},"D":{"score":"normal"|"caution"|"concern","note":string},"E":{"score":"normal"|"caution"|"concern","note":string}},"findings":[{"severity":"concern"|"caution"|"normal","text":string}]}
+Include 4-5 findings. Integrate the full patient health profile.`,
+          messages:[{role:'user',content:[
+            {type:'image',source:{type:'base64',media_type:'image/jpeg',data:capturedBase64}},
+            {type:'text',text:`Analyze this skin lesion.\n\n${ctx}\n\nReturn JSON assessment.`}
+          ]}]
+        })
+      });
+      if(!resp.ok)throw new Error('API '+resp.status);
+      const data=await resp.json();
+      const raw=data.content.map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
+      result=JSON.parse(raw);
+    }catch(err){
+      console.error('API fallback failed:', err);
+    }
+  }
+
+  // ==============================
+  // LAST RESORT: No model, no API
+  // ==============================
+  if(!result){
+    result={
+      riskLevel:'medium',riskTitle:'Analysis Unavailable',
+      riskDescription:'AI model is still loading or no API key set. Please wait and try again.',
+      confidence:0,
+      abcde:{A:{score:'pending',note:'\u2014'},B:{score:'pending',note:'\u2014'},C:{score:'pending',note:'\u2014'},D:{score:'pending',note:'\u2014'},E:{score:'pending',note:'\u2014'}},
+      findings:[{severity:'caution',text:'TF.js model loading... Refresh and try again, or add an API key in settings.'}]
+    };
+  }
+
+  aoStep(2,'done');aoStep(3,'act');await sleep(350);aoStep(3,'done');
+  aoStep(4,'act');await sleep(280);aoStep(4,'done');
+  await sleep(180);
+  showResults(result);
+}
+
+function showResults(r){
+  const pills={high:`<div class="risk-pill high">⚠ High Concern</div>`,medium:`<div class="risk-pill medium">⚡ Moderate Concern</div>`,low:`<div class="risk-pill low">✓ Low Concern</div>`};
+  document.getElementById('risk-pill-wrap').innerHTML=pills[r.riskLevel]||pills.medium;
+  document.getElementById('res-title').textContent=r.riskTitle||'—';
+  document.getElementById('res-desc').textContent=r.riskDescription||'—';
+  const thumb=document.getElementById('res-thumb');
+  thumb.src='data:image/jpeg;base64,'+capturedBase64;thumb.style.display='block';
+  const grid=document.getElementById('abcde-row');
+  grid.innerHTML='';
+  ['A','B','C','D','E'].forEach(l=>{
+    const d=r.abcde?.[l]||{score:'pending',note:'—'};
+    grid.innerHTML+=`<div class="abc-cell ${d.score}"><span class="abc-letter">${l}</span><span class="abc-note">${d.note}</span></div>`;
+  });
+  const conf=r.confidence||0;
+  setTimeout(()=>{document.getElementById('conf-fill').style.width=conf+'%';},100);
+  document.getElementById('conf-val').textContent=conf+'%';
+  document.getElementById('findings-list').innerHTML=(r.findings||[]).map(f=>
+    `<div class="fi"><div class="fi-dot ${f.severity}"></div><span class="fi-text">${f.text}</span></div>`
+  ).join('');
+  goTo('s-results');
+}
+
+function saveKey(){
+  anthropicKey=document.getElementById('api-key-input').value.trim();
+  goTo('s-splash');
+}
+
+function resetAll(){
+  capturedBase64=null;survey={};
+  const img=document.getElementById('preview-img');
+  img.style.display='none';img.src='';
+  document.getElementById('up-placeholder').style.display='block';
+  document.getElementById('upload-zone').classList.remove('has-img');
+  document.getElementById('analyze-btn').disabled=true;
+  document.getElementById('conf-fill').style.width='0%';
+}
+</script>
+
+<!-- Medical Disclaimer Footer -->
+<div id="medical-disclaimer-footer" style="
+  position:fixed;bottom:0;left:0;right:0;z-index:100;
+  background:rgba(10,15,40,0.95);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  border-top:1px solid rgba(255,255,255,0.1);
+  font-family:'DM Sans',sans-serif;
+  transition: transform 0.3s ease;
+">
+  <!-- Collapsed bar - always visible, tap to expand -->
+  <div id="disclaimer-bar" onclick="toggleDisclaimer()" style="
+    padding:8px 16px calc(env(safe-area-inset-bottom,0px) + 8px);
+    display:flex;align-items:center;justify-content:space-between;
+    cursor:pointer;
+  ">
+    <span style="font-size:11px;color:rgba(255,255,255,0.5);">
+      ⚠ <strong style="color:rgba(255,255,255,0.65);">Medical Disclaimer</strong> — tap to read
+    </span>
+    <span id="disclaimer-arrow" style="color:rgba(255,255,255,0.4);font-size:14px;transition:transform 0.3s;">▲</span>
+  </div>
+  <!-- Expanded content - hidden by default -->
+  <div id="disclaimer-content" style="
+    display:none;
+    padding:0 16px 12px;
+    text-align:center;
+  ">
+    <p style="font-size:11px;color:rgba(255,255,255,0.5);line-height:1.6;max-width:640px;margin:0 auto;">
+      ⚠ <strong style="color:rgba(255,255,255,0.7);">Medical Disclaimer:</strong>
+      DermaScan is an AI-powered screening tool developed for the
+      <strong style="color:rgba(255,255,255,0.7);">3M Young Scientist Challenge 2026</strong>.
+      It is intended for educational and informational purposes only and does
+      <strong style="color:rgba(255,255,255,0.7);">not</strong> constitute medical advice, diagnosis, or treatment.
+      Always seek the guidance of a board‑certified dermatologist or qualified healthcare provider with any questions regarding a skin condition.
+      Never disregard professional medical advice or delay seeking it because of information provided by this tool.
+    </p>
+  </div>
+</div>
+
+<script>
+function toggleDisclaimer() {
+  var content = document.getElementById('disclaimer-content');
+  var arrow = document.getElementById('disclaimer-arrow');
+  if (content.style.display === 'none') {
+    content.style.display = 'block';
+    arrow.style.transform = 'rotate(180deg)';
+  } else {
+    content.style.display = 'none';
+    arrow.style.transform = 'rotate(0deg)';
+  }
+}
+</script>
+
+</body>
+</html>
